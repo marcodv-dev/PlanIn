@@ -1,0 +1,82 @@
+:root {
+  /* Sfondo */
+  --bg-page: #e9e9e9;
+  --bg-card: #d7d7d7;
+  --bg-dark: #0d0d15;
+
+  /* Testo */
+  --text-white: #fff;
+  --text-black: #000;
+  --text-gray-300: #d1d5db;
+  --text-gray-400: #9ca3af;
+  --text-gray-500: #6b7280;
+  --text-gray-600: #4b5563;
+  --text-red-400: #f87171;
+  --text-red-500: #ef4444;
+  --text-red-300: #fca5a5;
+  --text-green-500: rgb(40, 197, 15);
+
+  /* Accento (attivo) */
+  --accent: #17c84f;
+  --accent-hover: #13a240;
+  --accent-opacity: #17c84f31;
+
+  /* Palette accent — aggiungi qui nuovi colori, compaiono da soli nel selettore */
+  --accent-orange: #e67c12;
+  --accent-orange-hover: #d1700f;
+  --accent-orange-opacity: #e67c1233;
+  --accent-cyan: #12c3e6;
+  --accent-cyan-hover: #0fa2bf;
+  --accent-cyan-opacity: #12c3e633;
+  --accent-blue: #1969fc;
+  --accent-blue-hover: #1052cc;
+  --accent-blue-opacity: #1969fc33;
+  --accent-pink: #fa4dc6;
+  --accent-pink-hover: #e647b6;
+  --accent-pink-opacity: #fa4dc633;
+  --accent-yellow: #e6cf00;
+  --accent-yellow-hover: #d4be00;
+  --accent-yellow-opacity: #e6cf0033;
+  --accent-purple: #d94fff;
+  --accent-purple-hover: #b345d1;
+  --accent-purple-opacity: #d94fff33;
+  --accent-magenta: #e612d0;
+  --accent-magenta-hover: #c910b6;
+  --accent-magenta-opacity: #e612d033;
+  --accent-green: #17c84f;
+  --accent-green-hover: #13a240;
+  --accent-green-opacity: #17c84f33;
+  --accent-emerald: #10e094;
+  --accent-emerald-hover: #0dbf7e;
+  --accent-emerald-opacity: #10e09433;
+  --accent-red: #ff3838;
+  --accent-red-hover: #db3030;
+  --accent-red-opacity: #ff383833;
+  
+
+  /* Bordi */
+  --border: #2a2a3a;
+  --border-light: #6b7280;
+
+  /* Stato */
+  --danger: #ef4444;
+  --danger-bg: rgba(239, 68, 68, 0.1);
+  --warning: #eab308;
+
+  /* Neri con opacità */
+  --black: #000;
+  --black-70: rgba(0, 0, 0, 0.7);
+
+  /* Button secondary */
+  --btn-secondary-bg: #969696;
+
+  /* Font */
+  --font-mono: 'Courier New', Courier, monospace, sans-serif;
+
+  /* Dimensioni */
+  --radius-sm: 0.125rem;
+  --radius: 0.25rem;
+  --radius-lg: 0.5rem;
+  --radius-lg2: 1.5rem;
+  --page-max-width: 32rem;
+}

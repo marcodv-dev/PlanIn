@@ -1,0 +1,83 @@
+.cyber-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  outline: none;
+  width: var(--width, auto);
+  height: var(--height);
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.cyber-btn.primary { --bgcolor: var(--accent); }
+.cyber-btn.secondary { --bgcolor: var(--btn-secondary-bg); }
+.cyber-btn.sm { --height: 36px; --width: 100px; }
+.cyber-btn.md { --height: 40px; }
+.cyber-btn.lg { --height: 44px; }
+.cyber-btn.xl { --height: 48px; font-size: 16px; }
+.cyber-btn.wide { --width: 220px; }
+.cyber-btn.full { --width: 70%; display: flex; margin: 0 auto;}
+
+.cyber-btn .btn-content {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  background-color: var(--bgcolor);
+  color: var(--bg-dark);
+  font-family: var(--font-mono);
+  font-weight: 900;
+  letter-spacing: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.15s ease, background-color 0.2s ease;
+  z-index: 1;
+}
+
+.cyber-btn .btn-content img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.cyber-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(to right,
+      #1a1a24 16px,
+      #1a1a24 16px,
+      #1a1a24 calc(100% - 16px),
+      transparent calc(100% - 16px)) 0 0 / 100% 4px no-repeat,
+    linear-gradient(to right, transparent 16px, #1a1a24 16px, #1a1a24 calc(100% - 16px), #1a1a24 calc(100% - 16px)) 0 100% / 100% 4px no-repeat;
+}
+
+.cyber-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(to bottom, #1a1a24 12px, #1a1a24 12px, #1a1a24 calc(100% - 12px), transparent calc(100% - 12px)) 0 0 / 4px 100% no-repeat,
+    linear-gradient(to bottom, transparent 12px, #1a1a24 12px, #1a1a24 calc(100% - 12px), #1a1a24 calc(100% - 12px)) 100% 0 / 4px 100% no-repeat;
+}
+
+.cyber-btn:active {
+  transform: scale(0.95);
+}
+
+.cyber-btn:active .btn-content {
+  /* transform: scale(0.95); */
+}
