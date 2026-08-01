@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import Login from './pages/auth/Login'
@@ -17,8 +18,16 @@ import { useData } from './store/DataContext'
 function Splash() {
   return (
     <div className="d-flex items-center justify-center h-screen">
-      <div className="logo-frame">
-        <img src="/PlanIn.png" alt="PlanIn" draggable={false} />
+      <div style={{
+        padding:'30px',
+        aspectRatio:1,
+        backgroundColor: '#fff',
+        borderColor:'#6b728042',
+        boxShadow:'0 0 20px 5px rgba(0,0,0,0.1)'
+      }} className='rounded-lg2 border'>
+        <div className="logo-frame">
+          <img src="/PlanIn.png" alt="PlanIn" draggable={false} />
+        </div>
       </div>
     </div>
   )
@@ -40,22 +49,33 @@ function PublicRoute({ children }) {
 }
 
 export default function App() {
-  return (
-    <Routes>
-      <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-      <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-      <Route path="/join/:code" element={<JoinGroup />} />
-      <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/groups/new" element={<CreateGroup />} />
-        <Route path="/groups/:groupId" element={<GroupDetail />} />
-        <Route path="/groups/:groupId/polls/new" element={<CreatePoll />} />
+  const { loading: authLoading } = useAuth()
+  const { loading: dataLoading } = useData()
+  const [booted, setBooted] = useState(false)
+  const isLoading = authLoading || dataLoading
 
-        <Route path="/groups/:groupId/events/new" element={<CreateEvent />} />
-        <Route path="/groups/:groupId/events/:eventId" element={<EventDetail />} />
-      </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+  useEffect(() => {
+    if (!isLoading) setBooted(true)
+  }, [isLoading])
+
+  return (
+    <div key={booted ? 'app' : 'boot'} className={booted ? 'content-fade-in' : ''}>
+      <Routes>
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+        <Route path="/join/:code" element={<JoinGroup />} />
+        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/groups/new" element={<CreateGroup />} />
+          <Route path="/groups/:groupId" element={<GroupDetail />} />
+          <Route path="/groups/:groupId/polls/new" element={<CreatePoll />} />
+
+          <Route path="/groups/:groupId/events/new" element={<CreateEvent />} />
+          <Route path="/groups/:groupId/events/:eventId" element={<EventDetail />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </div>
   )
 }
