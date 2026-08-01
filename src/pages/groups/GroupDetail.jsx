@@ -2,31 +2,27 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../store/AuthContext'
+import { useData } from '../../store/DataContext'
 import { geocodeAddress, isPollExpired } from '../../lib/utils'
 import { useToast } from '../../store/ToastContext'
 import Button from '../../components/ui/Button'
-import { Share2, BarChart3, Calendar, Users, ChevronLeft, Pencil, Trash2, Send, Plus, X, MessageCircle, Check, Clock } from 'lucide-react'
+import { Share2, BarChart3, Calendar, Users, ChevronLeft, Pencil, Trash2, Send, Plus, X, MessageCircle, Check } from 'lucide-react'
 
 export default function GroupDetail() {
   const { groupId } = useParams()
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [group, setGroup] = useState(null)
-  const [members, setMembers] = useState([])
-  const [polls, setPolls] = useState([])
-  const [events, setEvents] = useState([])
-  const [eventParticipants, setEventParticipants] = useState([])
+  const {
+    groups, membersByGroup, pollsByGroup, optionsByPoll, votesByPoll, commentsByPoll,
+    eventsByGroup, participantsByEvent, invitesByGroup,
+    refreshPollVotes, refreshPollOptions, refreshPollComments, upsertPoll,
+    deletePoll, deleteEvent, updateGroupName, ensureInviteCode
+  } = useData()
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = searchParams.get('tab') || 'polls'
-  const [inviteCode, setInviteCode] = useState('')
-  const [loading, setLoading] = useState(true)
   const { showToast } = useToast()
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
-  const [optionsMap, setOptionsMap] = useState({})
-  const [votesMap, setVotesMap] = useState({})
-  const [commentsMap, setCommentsMap] = useState({})
-  const [commentCountMap, setCommentCountMap] = useState({})
   const [visibleComments, setVisibleComments] = useState({})
   const [newCommentText, setNewCommentText] = useState({})
 
@@ -36,70 +32,15 @@ export default function GroupDetail() {
   const [editOptions, setEditOptions] = useState([])
   const [editingPollId, setEditingPollId] = useState(null)
 
+  const group = groups.find(g => g.id === groupId)
+  const members = membersByGroup[groupId] || []
+  const polls = pollsByGroup[groupId] || []
+  const events = eventsByGroup[groupId] || []
+  const inviteCode = invitesByGroup[groupId]
+
   useEffect(() => {
-    async function load() {
-      const { data: g } = await supabase.from('groups').select('*').eq('id', groupId).single()
-      setGroup(g)
-
-      const { data: m } = await supabase.from('group_members').select('*, profiles(*)').eq('group_id', groupId)
-      setMembers(m || [])
-
-      const { data: p } = await supabase.from('polls').select('*').eq('group_id', groupId)
-      const activePolls = p?.filter(poll => !isPollExpired(poll.expires_at)) || []
-      setPolls(activePolls)
-
-      if (activePolls.length > 0) {
-        const pollIds = activePolls.map(p => p.id)
-        const [optsRes, votesRes, commentCountsRes] = await Promise.all([
-          supabase.from('poll_options').select('*').in('poll_id', pollIds),
-          supabase.from('poll_votes').select('*, profiles(first_name, last_name, avatar_url, username)').in('poll_id', pollIds),
-          supabase.from('poll_comments').select('poll_id').in('poll_id', pollIds)
-        ])
-        const opts = {}
-        ;(optsRes.data || []).forEach(o => {
-          if (!opts[o.poll_id]) opts[o.poll_id] = []
-          opts[o.poll_id].push(o)
-        })
-        setOptionsMap(opts)
-
-        const vts = {}
-        ;(votesRes.data || []).forEach(v => {
-          if (!vts[v.poll_id]) vts[v.poll_id] = []
-          vts[v.poll_id].push(v)
-        })
-        setVotesMap(vts)
-
-        const cc = {}
-        ;(commentCountsRes.data || []).forEach(c => {
-          cc[c.poll_id] = (cc[c.poll_id] || 0) + 1
-        })
-        setCommentCountMap(cc)
-      }
-
-      const { data: e } = await supabase.from('events').select('*').eq('group_id', groupId)
-      setEvents(e || [])
-
-      if (e && e.length > 0) {
-        const { data: parts } = await supabase
-          .from('event_participants')
-          .select('event_id, user_id, status')
-          .in('event_id', e.map(ev => ev.id))
-        setEventParticipants(parts || [])
-      }
-
-      const { data: inv } = await supabase.from('group_invites').select('code').eq('group_id', groupId).limit(1).maybeSingle()
-      if (inv) {
-        setInviteCode(inv.code)
-      } else {
-        const code = Math.random().toString(36).substring(2, 8)
-        await supabase.from('group_invites').insert({ group_id: groupId, code, created_by: user.id })
-        setInviteCode(code)
-      }
-
-      setLoading(false)
-    }
-    load()
-  }, [groupId])
+    if (group && !inviteCode) ensureInviteCode(groupId, user.id)
+  }, [group, inviteCode, groupId, user.id, ensureInviteCode])
 
   async function copyInviteLink() {
     const link = `${window.location.origin}/join/${inviteCode}`
@@ -126,34 +67,11 @@ export default function GroupDetail() {
   async function handleSaveName() {
     if (!editName.trim() || editName === group.name) { setEditing(false); return }
     await supabase.from('groups').update({ name: editName.trim() }).eq('id', groupId)
-    setGroup(prev => ({ ...prev, name: editName.trim() }))
+    updateGroupName(groupId, editName.trim())
     setEditing(false)
   }
 
-  async function refreshVotes(pollId) {
-    const { data } = await supabase
-      .from('poll_votes')
-      .select('*, profiles(first_name, last_name, avatar_url, username)')
-      .eq('poll_id', pollId)
-    setVotesMap(prev => ({ ...prev, [pollId]: data || [] }))
-  }
-
-  async function refreshOptions(pollId) {
-    const { data } = await supabase.from('poll_options').select('*').eq('poll_id', pollId)
-    setOptionsMap(prev => ({ ...prev, [pollId]: data || [] }))
-  }
-
-  async function loadComments(pollId) {
-    const { data } = await supabase
-      .from('poll_comments')
-      .select('*, profiles(first_name, last_name, avatar_url)')
-      .eq('poll_id', pollId)
-      .order('created_at', { ascending: true })
-    setCommentsMap(prev => ({ ...prev, [pollId]: data || [] }))
-  }
-
   function toggleComments(pollId) {
-    if (!commentsMap[pollId]) loadComments(pollId)
     setVisibleComments(prev => ({ ...prev, [pollId]: !prev[pollId] }))
   }
 
@@ -162,7 +80,7 @@ export default function GroupDetail() {
     setEditingPollId(poll.id)
     setEditTitle(poll.title)
     setEditExpiresAt(new Date(poll.expires_at).toISOString().slice(0, 16))
-    const opts = optionsMap[poll.id] || []
+    const opts = optionsByPoll[poll.id] || []
     setEditOptions(opts.map(o => ({ id: o.id, title: o.title, location: o.location_name })))
     setPollEditing(true)
   }
@@ -203,8 +121,8 @@ export default function GroupDetail() {
     setEditingPollId(null)
     const { data: updated } = await supabase.from('polls').select('*').eq('id', editingPollId).single()
     if (updated) {
-      setPolls(prev => prev.map(p => p.id === updated.id ? updated : p))
-      await refreshOptions(editingPollId)
+      upsertPoll(updated)
+      await refreshPollOptions(editingPollId)
     }
   }
 
@@ -212,7 +130,7 @@ export default function GroupDetail() {
     e.stopPropagation()
     if (!window.confirm('Eliminare questo sondaggio?')) return
     await supabase.from('polls').delete().eq('id', pollId)
-    setPolls(prev => prev.filter(p => p.id !== pollId))
+    deletePoll(pollId)
     if (editingPollId === pollId) { setPollEditing(false); setEditingPollId(null) }
   }
 
@@ -221,25 +139,24 @@ export default function GroupDetail() {
     if (!window.confirm('Eliminare questo evento?')) return
     const { error } = await supabase.from('events').delete().eq('id', ev.id)
     if (error) { showToast(error?.message || String(error), 'error'); return }
-    setEvents(prev => prev.filter(x => x.id !== ev.id))
+    deleteEvent(ev.id)
     showToast('Evento eliminato', 'success')
   }
 
   async function handleVoteClick(pollId, optionId) {
     const poll = polls.find(p => p.id === pollId)
     if (!poll || isPollExpired(poll.expires_at)) return
-    const pollVotes = votesMap[pollId] || []
+    const pollVotes = votesByPoll[pollId] || []
     const myVoteIds = pollVotes.filter(v => v.user_id === user.id).map(v => v.option_id)
     const isVoted = myVoteIds.includes(optionId)
     if (isVoted) {
       await supabase.from('poll_votes').delete().eq('poll_id', pollId).eq('option_id', optionId).eq('user_id', user.id)
-      await refreshVotes(pollId)
     } else {
       await supabase.from('poll_votes').insert({
         poll_id: pollId, option_id: optionId, user_id: user.id
       })
-      await refreshVotes(pollId)
     }
+    await refreshPollVotes(pollId)
   }
 
   async function handleAddComment(pollId) {
@@ -249,11 +166,9 @@ export default function GroupDetail() {
       poll_id: pollId, user_id: user.id, content: text.trim()
     })
     setNewCommentText(prev => ({ ...prev, [pollId]: '' }))
-    setCommentCountMap(prev => ({ ...prev, [pollId]: (prev[pollId] || 0) + 1 }))
-    await loadComments(pollId)
+    await refreshPollComments(pollId)
   }
 
-  if (loading) return <div className="d-flex items-center justify-center h-64 text-gray-500">Caricamento...</div>
   if (!group) return <div className="p-4 text-red-500">Gruppo non trovato</div>
 
   const isAdmin = members.some(m => m.user_id === user.id && m.role === 'admin')
@@ -262,28 +177,28 @@ export default function GroupDetail() {
   return (
     <div className="d-flex-1 d-flex flex-col px-4 pt-4 overflow-hidden">
       <div  style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-        <div className="d-flex items-center gap-3 mb-2">
+        <div className="d-flex items-center gap-3 mb-2 flex-1 min-w-0 ">
           <button onClick={() => navigate('/')} className="text-black">
             <ChevronLeft size={30} />
           </button>
           {editing ? (
             <input value={editName} onChange={e => setEditName(e.target.value)}
               onBlur={handleSaveName} onKeyDown={e => e.key === 'Enter' && handleSaveName()}
-              className="text-xl font-bold text-accent bg-transparent border-accent outline-none" autoFocus style={{border:'none'}}/>
+              className="w-full text-xl font-bold text-accent bg-transparent border-accent outline-none flex-1" autoFocus style={{border:'none'}}/>
           ) : (
-            <h1 className="text-xl font-bold text-accent">{group.name}</h1>
+            <h1 className="text-xl font-bold text-accent">{group.name}
+            {isAdmin && !editing && (
+              <button onClick={() => { setEditName(group.name); setEditing(true) }} className="text-gray-400 hover:text-accent ml-2 my-auto">
+                <Pencil size={18} />
+              </button>
+            )}</h1>
           )}
-          {isAdmin && !editing && (
-            <button onClick={() => { setEditName(group.name); setEditing(true) }} className="text-gray-400 hover:text-accent">
-              <Pencil size={16} />
-            </button>
-          )}
+          
         </div>
 
         <button onClick={copyInviteLink}
-          className="d-flex items-center gap-2 text-sm text-gray-400 hover:text-accent transition relative">
-          <Share2 size={14}/>
-          {inviteCode ? 'Condividi invito' : 'Nessun codice'}
+          className="w-20 d-flex items-center justify-end gap-2 text-sm text-gray-400 hover:text-accent transition relative">
+          {inviteCode && <><Share2 size={22}/></>}
         </button>
       </div>
 
@@ -313,14 +228,14 @@ export default function GroupDetail() {
             <div className="flex-1 overflow-y-auto space-y-3 pb-2">
               {polls.map(poll => {
                 const expired = isPollExpired(poll.expires_at)
-                const options = optionsMap[poll.id] || []
-                const votes = votesMap[poll.id] || []
+                const options = optionsByPoll[poll.id] || []
+                const votes = votesByPoll[poll.id] || []
                 const myVoteIds = votes.filter(v => v.user_id === user.id).map(v => v.option_id)
                 const voteCounts = {}
                 votes.forEach(v => { voteCounts[v.option_id] = (voteCounts[v.option_id] || 0) + 1 })
                 const totalV = votes.length
-                const comments = commentsMap[poll.id] || []
-                const commentCount = commentCountMap[poll.id] || 0
+                const comments = commentsByPoll[poll.id] || []
+                const commentCount = (commentsByPoll[poll.id] || []).length
 
                 return (
                   <div key={poll.id} className="bg-card border border-card rounded-lg2 overflow-hidden">
@@ -492,7 +407,7 @@ export default function GroupDetail() {
           ) : (
             <div className="flex-1 overflow-y-auto space-y-3 pb-2">
               {events.map(ev => {
-                const evParts = eventParticipants.filter(p => p.event_id === ev.id)
+                const evParts = participantsByEvent[ev.id] || []
                 const activeCount = evParts.filter(p => p.status !== 'declined').length
                 const myStatus = evParts.find(p => p.user_id === user.id)?.status
                 return (

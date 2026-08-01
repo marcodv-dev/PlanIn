@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../store/AuthContext'
+import { useData } from '../../store/DataContext'
 import { reverseGeocode, geocodeAddress, isPollExpired } from '../../lib/utils'
 import Button from '../../components/ui/Button'
 import { ArrowLeft, Send, Pencil, Trash2, Plus, X } from 'lucide-react'
@@ -10,63 +11,30 @@ export default function PollDetail() {
   const { groupId, pollId } = useParams()
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [poll, setPoll] = useState(null)
-  const [options, setOptions] = useState([])
-  const [myVotes, setMyVotes] = useState([])
-  const [comments, setComments] = useState([])
+  const {
+    pollsByGroup, optionsByPoll, votesByPoll, commentsByPoll,
+    refreshPollVotes, refreshPollComments, refreshPollOptions, upsertPoll, deletePoll
+  } = useData()
   const [newComment, setNewComment] = useState('')
   const [showLocationModal, setShowLocationModal] = useState(false)
   const [pendingOptionId, setPendingOptionId] = useState(null)
   const [startLocation, setStartLocation] = useState({ name: '', lat: null, lng: null })
-  const [loading, setLoading] = useState(true)
-  const [voteCounts, setVoteCounts] = useState({})
-  const [totalVotes, setTotalVotes] = useState(0)
   const [editing, setEditing] = useState(false)
   const [editTitle, setEditTitle] = useState('')
   const [editExpiresAt, setEditExpiresAt] = useState('')
   const [editOptions, setEditOptions] = useState([])
 
+  const poll = (pollsByGroup[groupId] || []).find(p => p.id === pollId)
+  const options = optionsByPoll[pollId] || []
+  const votes = votesByPoll[pollId] || []
+  const comments = commentsByPoll[pollId] || []
+
+  const myVotes = votes.filter(v => v.user_id === user.id).map(v => v.option_id)
+  const voteCounts = {}
+  votes.forEach(v => { voteCounts[v.option_id] = (voteCounts[v.option_id] || 0) + 1 })
+  const totalVotes = votes.length
+
   const expired = poll ? isPollExpired(poll.expires_at) : false
-
-  const loadData = useCallback(async () => {
-    const { data: p } = await supabase.from('polls').select('*').eq('id', pollId).single()
-    setPoll(p)
-
-    const { data: opts } = await supabase.from('poll_options').select('*').eq('poll_id', pollId)
-    setOptions(opts || [])
-
-    const { data: votes } = await supabase.from('poll_votes').select('*').eq('poll_id', pollId)
-    if (votes) {
-      const my = votes.filter(v => v.user_id === user.id)
-      setMyVotes(my.map(v => v.option_id))
-
-      const counts = {}
-      votes.forEach(v => { counts[v.option_id] = (counts[v.option_id] || 0) + 1 })
-      setVoteCounts(counts)
-      setTotalVotes(votes.length)
-    }
-
-    const { data: comms } = await supabase
-      .from('poll_comments')
-      .select('*, profiles(first_name, last_name, avatar_url)')
-      .eq('poll_id', pollId)
-      .order('created_at', { ascending: true })
-    setComments(comms || [])
-
-    setLoading(false)
-  }, [pollId, user.id])
-
-  useEffect(() => { loadData() }, [loadData])
-
-  useEffect(() => {
-    const channel = supabase.channel(`poll-votes-${pollId}`)
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'poll_votes', filter: `poll_id=eq.${pollId}` },
-        () => loadData()
-      )
-      .subscribe()
-    return () => supabase.removeChannel(channel)
-  }, [pollId, loadData])
 
   function handleStartEdit() {
     if (!poll) return
@@ -111,12 +79,15 @@ export default function PollDetail() {
     }
 
     setEditing(false)
-    loadData()
+    const { data: updated } = await supabase.from('polls').select('*').eq('id', pollId).single()
+    if (updated) upsertPoll(updated)
+    await refreshPollOptions(pollId)
   }
 
   async function handleDelete() {
     if (!window.confirm('Eliminare questo sondaggio?')) return
     await supabase.from('polls').delete().eq('id', pollId)
+    deletePoll(pollId)
     navigate(`/groups/${groupId}`)
   }
 
@@ -125,7 +96,6 @@ export default function PollDetail() {
     const isVoted = myVotes.includes(optionId)
     if (isVoted) {
       await supabase.from('poll_votes').delete().eq('poll_id', pollId).eq('option_id', optionId).eq('user_id', user.id)
-      loadData()
     } else {
       setPendingOptionId(optionId)
       if (navigator.geolocation) {
@@ -137,12 +107,13 @@ export default function PollDetail() {
             start_lat: pos.coords.latitude,
             start_lng: pos.coords.longitude
           })
-          loadData()
+          await refreshPollVotes(pollId)
         }, () => setShowLocationModal(true))
       } else {
         setShowLocationModal(true)
       }
     }
+    if (isVoted) await refreshPollVotes(pollId)
   }
 
   async function submitVoteWithManualLocation() {
@@ -165,7 +136,7 @@ export default function PollDetail() {
     })
     setShowLocationModal(false)
     setStartLocation({ name: '', lat: null, lng: null })
-    loadData()
+    await refreshPollVotes(pollId)
   }
 
   async function handleAddComment(e) {
@@ -175,10 +146,9 @@ export default function PollDetail() {
       poll_id: pollId, user_id: user.id, content: newComment.trim()
     })
     setNewComment('')
-    loadData()
+    await refreshPollComments(pollId)
   }
 
-  if (loading) return <div className="d-flex items-center justify-center h-64 text-gray-500">Caricamento...</div>
   if (!poll) return <div className="p-4 text-red-500">Sondaggio non trovato</div>
 
   return (

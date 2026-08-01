@@ -39,7 +39,7 @@ export default function Layout() {
       <main className="d-flex-1 d-flex flex-col overflow-hidden">
         <Outlet />
       </main>
-      <nav className="shrink-0 d-flex justify-around items-center py-4 px-4" style={{border:'none',borderTop:'1px solid'}}>
+      <nav className="shrink-0 d-flex justify-around items-center pt-4 pb-8 px-4" style={{border:'none',borderTop:'1px solid'}}>
         <NavLink to="/" end onClick={handleGroupsClick} className={() => `d-flex d-flex-col items-center gap-1 text-xs ${location.pathname !== '/profile' ? 'text-accent' : 'text-gray-500'}`}>
           <Group size={40} />
         </NavLink>

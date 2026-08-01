@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../store/AuthContext'
+import { useData } from '../../store/DataContext'
 import { generateInviteCode } from '../../lib/utils'
 import { useToast } from '../../store/ToastContext'
 import Button from '../../components/ui/Button'
@@ -11,6 +12,7 @@ export default function CreateGroup() {
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
   const { user } = useAuth()
+  const { refreshGroup, upsertGroup } = useData()
   const { showToast } = useToast()
   const navigate = useNavigate()
 
@@ -33,6 +35,8 @@ export default function CreateGroup() {
         group_id: group.id, code: generateInviteCode(), created_by: user.id
       })
 
+      upsertGroup(group)
+      await refreshGroup(group.id)
       navigate(`/groups/${group.id}`)
     } catch (err) {
       showToast(err?.message || String(err), 'error')

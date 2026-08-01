@@ -5,6 +5,7 @@ import L from 'leaflet'
 import 'leaflet.markercluster'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../store/AuthContext'
+import { useData } from '../../store/DataContext'
 import { reverseGeocode, resolveMapsLink, geocodeAddress } from '../../lib/utils'
 import { ChevronLeft, MapPin, Users, RotateCcw } from 'lucide-react'
 
@@ -39,58 +40,39 @@ export default function EventDetail() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [event, setEvent] = useState(null)
-  const [participants, setParticipants] = useState([])
-  const [myParticipation, setMyParticipation] = useState(null)
+  const { eventsByGroup, participantsByEvent, refreshEventParticipants } = useData()
   const [startLocationText, setStartLocationText] = useState('')
   const [isLocationModified, setIsLocationModified] = useState(false)
-  const [loading, setLoading] = useState(true)
   const autoCreatedRef = useRef(false)
+  const didInitTextRef = useRef(false)
+
+  const event = (eventsByGroup[groupId] || []).find(ev => ev.id === eventId)
+  const participants = participantsByEvent[eventId] || []
+  const myParticipation = participants.find(p => p.user_id === user.id) || null
 
   useEffect(() => {
-    async function load() {
-      const { data: ev } = await supabase.from('events').select('*').eq('id', eventId).single()
-      setEvent(ev)
-
-      const { data: parts } = await supabase
-        .from('event_participants')
-        .select('*, profiles(first_name, last_name, avatar_url, username, home_lat, home_lng)')
-        .eq('event_id', eventId)
-      setParticipants(parts || [])
-
-      const my = parts?.find(p => p.user_id === user.id)
-      setMyParticipation(my || null)
-
-      // Auto-create 'declined' on first visit for group members
-      if (!my && ev && !autoCreatedRef.current) {
-        autoCreatedRef.current = true
+    if (!event || autoCreatedRef.current) return
+    if (!myParticipation) {
+      autoCreatedRef.current = true
+      ;(async () => {
         await supabase.from('event_participants').insert({
           event_id: eventId, user_id: user.id, status: 'declined'
         })
-        const { data: parts2 } = await supabase
-          .from('event_participants')
-          .select('*, profiles(first_name, last_name, avatar_url, username, home_lat, home_lng)')
-          .eq('event_id', eventId)
-        setParticipants(parts2 || [])
-        const my2 = parts2?.find(p => p.user_id === user.id)
-        setMyParticipation(my2 || null)
-        if (my2?.start_location_name) {
-          setStartLocationText(my2.start_location_name)
-        } else if (profile?.home_address) {
-          setStartLocationText(profile.home_address)
-        }
-      } else {
-        if (my?.start_location_name) {
-          setStartLocationText(my.start_location_name)
-        } else if (profile?.home_address) {
-          setStartLocationText(profile.home_address)
-        }
-      }
-
-      setLoading(false)
+        await refreshEventParticipants(eventId)
+      })()
     }
-    load()
-  }, [eventId, user.id, profile?.home_address])
+  }, [event, myParticipation, eventId, user.id, refreshEventParticipants])
+
+  useEffect(() => {
+    if (didInitTextRef.current || !event) return
+    if (!myParticipation) return
+    didInitTextRef.current = true
+    if (myParticipation.start_location_name) {
+      setStartLocationText(myParticipation.start_location_name)
+    } else if (profile?.home_address) {
+      setStartLocationText(profile.home_address)
+    }
+  }, [event, myParticipation, profile?.home_address])
 
   async function resolveLocation() {
     const text = startLocationText?.trim()
@@ -135,14 +117,8 @@ export default function EventDetail() {
       }
       await supabase.from('event_participants').insert(insertData)
     }
-    // Reload
-    const { data: parts } = await supabase
-      .from('event_participants')
-      .select('*, profiles(first_name, last_name, avatar_url, username, home_lat, home_lng)')
-      .eq('event_id', eventId)
-    setParticipants(parts || [])
-    const my = parts?.find(p => p.user_id === user.id)
-    setMyParticipation(my || null)
+    const parts = await refreshEventParticipants(eventId)
+    const my = parts.find(p => p.user_id === user.id)
     if (my?.start_location_name) {
       setStartLocationText(my.start_location_name)
     } else if (profile?.home_address) {
@@ -165,12 +141,7 @@ export default function EventDetail() {
     setStartLocationText(name)
     setIsLocationModified(name !== profile?.home_address)
 
-    // Reload
-    const { data: parts } = await supabase
-      .from('event_participants')
-      .select('*, profiles(first_name, last_name, avatar_url, username, home_lat, home_lng)')
-      .eq('event_id', eventId)
-    setParticipants(parts || [])
+    await refreshEventParticipants(eventId)
   }
 
   async function handleResetLocation() {
@@ -184,15 +155,9 @@ export default function EventDetail() {
     setStartLocationText(profile.home_address || '')
     setIsLocationModified(false)
 
-    // Reload
-    const { data: parts } = await supabase
-      .from('event_participants')
-      .select('*, profiles(first_name, last_name, avatar_url, username, home_lat, home_lng)')
-      .eq('event_id', eventId)
-    setParticipants(parts || [])
+    await refreshEventParticipants(eventId)
   }
 
-  if (loading) return <div className="d-flex items-center justify-center h-64 text-gray-500">Caricamento...</div>
   if (!event) return <div className="p-4 text-red-500">Evento non trovato</div>
 
   const activeParticipants = participants.filter(p => p.status !== 'declined')

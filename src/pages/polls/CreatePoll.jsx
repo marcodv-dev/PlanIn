@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../store/AuthContext'
+import { useData } from '../../store/DataContext'
 import { geocodeAddress } from '../../lib/utils'
 import { useToast } from '../../store/ToastContext'
 import Button from '../../components/ui/Button'
@@ -10,6 +11,7 @@ import { ArrowLeft, ChevronLeft, Plus, Trash2 } from 'lucide-react'
 export default function CreatePoll() {
   const { groupId } = useParams()
   const { user } = useAuth()
+  const { refreshGroup } = useData()
   const { showToast } = useToast()
   const navigate = useNavigate()
   const [title, setTitle] = useState('')
@@ -53,6 +55,7 @@ export default function CreatePoll() {
         if (optErr) throw optErr
       }
 
+      await refreshGroup(groupId)
       navigate(`/groups/${groupId}`)
     } catch (err) {
       showToast(err?.message || String(err), 'error')

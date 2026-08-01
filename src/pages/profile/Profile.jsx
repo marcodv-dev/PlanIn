@@ -107,7 +107,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="p-4">
+    <div className="pt-4 px-4 flex-1 overflow-hidden d-flex flex-col">
       <div className="d-flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-accent">Profilo</h1>
         <div style={{ position: 'relative' }}>
@@ -134,57 +134,60 @@ export default function Profile() {
         </div>
       </div>
 
-      <div className="wide-grid mx-auto w-full">
-        <div className="wide-avatar d-flex d-flex-col items-center mb-6">
-        <div onClick={() => fileInputRef.current?.click()}
-          className="mx-auto rounded-full border-2 border-accent d-flex items-center justify-center overflow-hidden mb-2 cursor-pointer hover:opacity-80 transition relative"
-          style={{width:'50%',aspectRatio:1, maxWidth:'200px'}}>
-          {avatarPreview
-            ? <img src={avatarPreview} alt="" className="w-full h-full object-cover" />
-            : profile?.avatar_url
-              ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-              : <span className="text-accent font-bold" style={{fontSize:60}}>{profile?.username?.[0]}</span>
-          }
-        </div>
-        <input type="file" accept="image/*" ref={fileInputRef} className="hidden"
-          onChange={e => {
-            const file = e.target.files?.[0]
-            if (file) {
-              setAvatar(file)
-              setAvatarPreview(URL.createObjectURL(file))
+      <div className='flex-1 overflow-y-auto'>
+
+        <div className="wide-grid mx-auto w-full">
+          <div className="wide-avatar d-flex d-flex-col items-center mb-6">
+          <div onClick={() => fileInputRef.current?.click()}
+            className="mx-auto rounded-full border-2 border-accent d-flex items-center justify-center overflow-hidden mb-2 cursor-pointer hover:opacity-80 transition relative"
+            style={{width:'50%',aspectRatio:1, maxWidth:'200px'}}>
+            {avatarPreview
+              ? <img src={avatarPreview} alt="" className="w-full h-full object-cover" />
+              : profile?.avatar_url
+                ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                : <span className="text-accent font-bold" style={{fontSize:60}}>{profile?.username?.[0]}</span>
             }
-          }} />
-      </div>
+          </div>
+          <input type="file" accept="image/*" ref={fileInputRef} className="hidden"
+            onChange={e => {
+              const file = e.target.files?.[0]
+              if (file) {
+                setAvatar(file)
+                setAvatarPreview(URL.createObjectURL(file))
+              }
+            }} />
+        </div>
 
-      <form onSubmit={handleSubmit} className="wide-form space-y-3">
-        <div className="d-flex gap-2">
-          <div className="d-flex-1">
-            <label className="block text-sm mb-1 text-gray-600">Nome</label>
-            <input name="first_name" value={form.first_name} onChange={handleChange} required
+        <form onSubmit={handleSubmit} className="wide-form space-y-3">
+          <div className="d-flex gap-2">
+            <div className="d-flex-1">
+              <label className="block text-sm mb-1 text-gray-600">Nome</label>
+              <input name="first_name" value={form.first_name} onChange={handleChange} required
+                className="w-full border border-card rounded px-3 py-2 text-black outline-none focus:border-accent" />
+            </div>
+            <div className="d-flex-1">
+              <label className="block text-sm mb-1 text-gray-600">Cognome</label>
+              <input name="last_name" value={form.last_name} onChange={handleChange} required
+                className="w-full border border-card rounded px-3 py-2 text-black outline-none focus:border-accent" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm mb-1 text-gray-600">Username</label>
+            <input name="username" value={form.username} onChange={handleChange} required
               className="w-full border border-card rounded px-3 py-2 text-black outline-none focus:border-accent" />
           </div>
-          <div className="d-flex-1">
-            <label className="block text-sm mb-1 text-gray-600">Cognome</label>
-            <input name="last_name" value={form.last_name} onChange={handleChange} required
+          <div className='mb-8'>
+            <label className="block text-sm mb-1 text-gray-600">Indirizzo di casa</label>
+            <input name="home_address" value={form.home_address} onChange={handleChange} required
               className="w-full border border-card rounded px-3 py-2 text-black outline-none focus:border-accent" />
           </div>
-        </div>
-        <div>
-          <label className="block text-sm mb-1 text-gray-600">Username</label>
-          <input name="username" value={form.username} onChange={handleChange} required
-            className="w-full border border-card rounded px-3 py-2 text-black outline-none focus:border-accent" />
-        </div>
-        <div className='mb-8'>
-          <label className="block text-sm mb-1 text-gray-600">Indirizzo di casa</label>
-          <input name="home_address" value={form.home_address} onChange={handleChange} required
-            className="w-full border border-card rounded px-3 py-2 text-black outline-none focus:border-accent" />
-        </div>
-        <Button type="submit" text={loading ? 'Salvataggio...' : 'Salva Profilo'} variant="primary" size="xl" fullWidth />
-      </form>
+          <Button type="submit" text={loading ? 'Salvataggio...' : 'Salva Profilo'} variant="primary" size="xl" fullWidth />
+        </form>
 
-      <button onClick={handleLogout} className="wide-logout d-flex items-center justify-center gap-2 mt-6 py-1 px-2 mx-auto border border-danger/50 text-red-400 rounded hover:bg-danger/10 transition">
-        <LogOut size={18} /> Esci
-      </button>
+        <button onClick={handleLogout} className="wide-logout d-flex items-center justify-center gap-2 mt-6 mb-4 py-1 px-2 mx-auto border border-danger/50 text-red-400 rounded hover:bg-danger/10 transition">
+          <LogOut size={18} /> Esci
+        </button>
+        </div>
       </div>
     </div>
   )

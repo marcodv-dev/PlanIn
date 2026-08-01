@@ -12,17 +12,29 @@ import CreatePoll from './pages/polls/CreatePoll'
 import CreateEvent from './pages/events/CreateEvent'
 import EventDetail from './pages/events/EventDetail'
 import { useAuth } from './store/AuthContext'
+import { useData } from './store/DataContext'
+
+function Splash() {
+  return (
+    <div className="d-flex items-center justify-center h-screen">
+      <div className="logo-frame">
+        <img src="/PlanIn.png" alt="PlanIn" draggable={false} />
+      </div>
+    </div>
+  )
+}
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
-  if (loading) return <div className="flex items-center justify-center h-screen text-xl">Caricamento...</div>
+  const { loading: dataLoading } = useData()
+  if (loading || dataLoading) return <Splash />
   if (!user) return <Navigate to="/login" replace />
   return children
 }
 
 function PublicRoute({ children }) {
   const { user, loading } = useAuth()
-  if (loading) return <div className="flex items-center justify-center h-screen text-xl">Caricamento...</div>
+  if (loading) return <Splash />
   if (user) return <Navigate to="/" replace />
   return children
 }

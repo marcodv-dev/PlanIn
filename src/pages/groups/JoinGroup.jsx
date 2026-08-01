@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../store/AuthContext'
+import { useData } from '../../store/DataContext'
 import Button from '../../components/ui/Button'
 
 export default function JoinGroup() {
   const { code } = useParams()
   const { user } = useAuth()
+  const { joinGroup } = useData()
   const navigate = useNavigate()
   const [group, setGroup] = useState(null)
   const [error, setError] = useState('')
@@ -41,6 +43,7 @@ export default function JoinGroup() {
         group_id: group.id, user_id: user.id, role: 'member'
       })
       if (err) throw err
+      await joinGroup(group.id)
       navigate(`/groups/${group.id}`)
     } catch (err) {
       setError(err.message)

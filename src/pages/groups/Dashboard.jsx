@@ -1,31 +1,16 @@
-import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../store/AuthContext'
+import { useData } from '../../store/DataContext'
 import { useToast } from '../../store/ToastContext'
 import Button from '../../components/ui/Button'
 import { Plus, Users, Trash2 } from 'lucide-react'
 
 export default function Dashboard() {
   const { user } = useAuth()
+  const { groups, deleteGroup } = useData()
   const { showToast } = useToast()
-  const [groups, setGroups] = useState([])
-  const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
-
-  useEffect(() => {
-    if (!user) return
-    supabase
-      .from('group_members')
-      .select('group_id, groups(*)')
-      .eq('user_id', user.id)
-      .then(({ data }) => {
-        if (data) setGroups(data.map(d => d.groups))
-        setLoading(false)
-      })
-  }, [user])
-
-  if (loading) return <div className="d-flex items-center justify-center h-64 text-gray-500">Caricamento...</div>
 
   async function handleDeleteGroup(e, group) {
     e.preventDefault()
@@ -33,7 +18,7 @@ export default function Dashboard() {
     if (!window.confirm(`Eliminare il gruppo "${group.name}"? Verranno eliminati anche sondaggi, eventi e membri.`)) return
     const { error } = await supabase.from('groups').delete().eq('id', group.id)
     if (error) { showToast(error?.message || String(error), 'error'); return }
-    setGroups(prev => prev.filter(g => g.id !== group.id))
+    deleteGroup(group.id)
     showToast('Gruppo eliminato', 'success')
   }
 

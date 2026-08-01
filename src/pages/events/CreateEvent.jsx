@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../store/AuthContext'
+import { useData } from '../../store/DataContext'
 import { geocodeAddress, resolveMapsLink } from '../../lib/utils'
 import { useToast } from '../../store/ToastContext'
 import Button from '../../components/ui/Button'
@@ -10,6 +11,7 @@ import { ArrowLeft, ChevronLeft } from 'lucide-react'
 export default function CreateEvent() {
   const { groupId } = useParams()
   const { user } = useAuth()
+  const { refreshGroup } = useData()
   const { showToast } = useToast()
   const navigate = useNavigate()
   const [activeOptions, setActiveOptions] = useState([])
@@ -146,6 +148,7 @@ export default function CreateEvent() {
         }
       }
 
+      await refreshGroup(groupId)
       navigate(`/groups/${groupId}/events/${event.id}`)
     } catch (err) {
       showToast(err?.message || String(err), 'error')
