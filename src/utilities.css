@@ -183,6 +183,7 @@
 
 /* --- Focus States --- */
 .focus\:border-accent:focus { border-color: var(--accent-hover); }
+.focus\:border-auth:focus { border-color: var(--text-gray-400); }
 
 .active\:scale-95:active{transform: scale(0.95);}
 .active\:scale-98:active{transform: scale(0.98);}
@@ -247,12 +248,28 @@
     linear-gradient(to bottom, transparent 12px, #1a1a24 12px, #1a1a24 calc(100% - 12px), #1a1a24 calc(100% - 12px)) 100% 0 / 4px 100% no-repeat;
 } */
 
-/* --- Fade-in dopo lo splash --- */
+/* --- Transizione splash -> contenuto --- */
+@keyframes splashOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.splash-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background-color: var(--bg-page);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.splash-leave {
+  animation: splashOut 0.5s ease forwards;
+}
+
 @keyframes contentFadeIn {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 .content-fade-in {
-  animation: contentFadeIn 0.6s ease-out backwards;
-  will-change: opacity, transform;
+  animation: contentFadeIn 0.7s ease-out backwards;
 }

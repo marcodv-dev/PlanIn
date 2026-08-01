@@ -15,16 +15,19 @@ import EventDetail from './pages/events/EventDetail'
 import { useAuth } from './store/AuthContext'
 import { useData } from './store/DataContext'
 
-function Splash() {
+function Splash({ leaving, onEnd }) {
   return (
-    <div className="d-flex items-center justify-center h-screen">
+    <div
+      className={`splash-overlay ${leaving ? 'splash-leave' : ''}`}
+      onAnimationEnd={(e) => { if (e.target === e.currentTarget) onEnd() }}
+    >
       <div style={{
-        padding:'30px',
-        aspectRatio:1,
+        padding: '30px',
+        aspectRatio: 1,
         backgroundColor: '#fff',
-        borderColor:'#6b728042',
-        boxShadow:'0 0 20px 5px rgba(0,0,0,0.1)'
-      }} className='rounded-lg2 border'>
+        borderColor: '#6b728042',
+        boxShadow: '0 0 20px 5px rgba(0,0,0,0.1)'
+      }} className="rounded-lg2 border">
         <div className="logo-frame">
           <img src="/PlanIn.png" alt="PlanIn" draggable={false} />
         </div>
@@ -35,15 +38,14 @@ function Splash() {
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
-  const { loading: dataLoading } = useData()
-  if (loading || dataLoading) return <Splash />
+  if (loading) return null
   if (!user) return <Navigate to="/login" replace />
   return children
 }
 
 function PublicRoute({ children }) {
   const { user, loading } = useAuth()
-  if (loading) return <Splash />
+  if (loading) return null
   if (user) return <Navigate to="/" replace />
   return children
 }
@@ -51,15 +53,27 @@ function PublicRoute({ children }) {
 export default function App() {
   const { loading: authLoading } = useAuth()
   const { loading: dataLoading } = useData()
-  const [booted, setBooted] = useState(false)
+  const [leaving, setLeaving] = useState(false)
+  const [gone, setGone] = useState(false)
   const isLoading = authLoading || dataLoading
 
   useEffect(() => {
-    if (!isLoading) setBooted(true)
+    if (!isLoading) {
+      const id = requestAnimationFrame(() => setLeaving(true))
+      return () => cancelAnimationFrame(id)
+    }
   }, [isLoading])
 
+  useEffect(() => {
+    if (!leaving) return
+    const t = setTimeout(() => setGone(true), 800)
+    return () => clearTimeout(t)
+  }, [leaving])
+
   return (
-    <div key={booted ? 'app' : 'boot'} className={booted ? 'content-fade-in' : ''}>
+    <>
+      {!gone && <Splash leaving={leaving} onEnd={() => setGone(true)} />}
+      <div className={leaving ? 'content-fade-in' : ''}>
       <Routes>
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
@@ -76,6 +90,7 @@ export default function App() {
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </div>
+      </div>
+    </>
   )
 }

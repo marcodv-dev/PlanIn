@@ -76,7 +76,8 @@ export default function Register() {
   return (
     <div className="min-h-screen d-flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        <h1 className="text-3xl font-bold text-center mb-2 text-accent">PlanIn</h1>
+        <img src="/PlanIn-title.png" alt="PlanIn" draggable={false}
+          className="d-flex mx-auto mb-2 mt-4" style={{ width: '200px', height: 'auto' }} />
         <p className="text-gray-500 text-center mb-8 text-sm">Crea il tuo account</p>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="d-flex gap-2">
@@ -119,10 +120,10 @@ export default function Register() {
             </div>
             <p className="text-xs text-gray-500 mt-1">Clicca l'icona per usare la posizione GPS</p>
           </div>
-          <Button type="submit" text={loading ? 'Registrazione...' : 'Registrati'} variant="primary" size="xl" fullWidth />
+          <Button type="submit" text={loading ? 'Registrazione...' : 'Registrati'} variant="primary2" size="xl" fullWidth />
         </form>
         <p className="text-center mt-4 text-sm text-gray-500">
-          Hai già un account? <Link to="/login" className="text-accent hover:underline">Accedi</Link>
+          Hai già un account? <Link to="/login" className="text-black hover:underline">Accedi</Link>
         </p>
       </div>
     </div>

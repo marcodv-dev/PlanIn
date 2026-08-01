@@ -15,6 +15,7 @@
 }
 
 .cyber-btn.primary { --bgcolor: var(--accent); }
+.cyber-btn.primary2 { --bgcolor: var(--bg-page); }
 .cyber-btn.secondary { --bgcolor: var(--btn-secondary-bg); }
 .cyber-btn.sm { --height: 36px; --width: 100px; }
 .cyber-btn.md { --height: 40px; }
