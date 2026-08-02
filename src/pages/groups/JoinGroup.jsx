@@ -21,18 +21,15 @@ export default function JoinGroup() {
 
   useEffect(() => {
     async function load() {
-      const { data: invite } = await supabase
-        .from('group_invites')
-        .select('*, groups(*)')
-        .eq('code', code)
-        .single()
+      const { data, error } = await supabase.rpc('get_invite_by_code', { invite_code: code })
+      const invite = data?.[0]
 
-      if (!invite || (invite.expires_at && new Date(invite.expires_at) < new Date())) {
+      if (error || !invite || (invite.expires_at && new Date(invite.expires_at) < new Date())) {
         setError('Link invito non valido o scaduto')
         setLoading(false)
         return
       }
-      setGroup(invite.groups)
+      setGroup(invite)
       setLoading(false)
     }
     load()
