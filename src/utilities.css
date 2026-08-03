@@ -101,6 +101,7 @@
 .ml-2 { margin-left: 0.5rem; }
 
 /* --- Gap --- */
+.gap-0\.5 { gap: 0.125rem; }
 .gap-1 { gap: 0.25rem; }
 .gap-2 { gap: 0.5rem; }
 .gap-3 { gap: 0.75rem; }
