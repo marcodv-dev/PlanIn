@@ -16,7 +16,7 @@ export default function JoinGroup() {
   const [joining, setJoining] = useState(false)
   const [alreadyMember, setAlreadyMember] = useState(false)
 
-  const isMember = !!user && !!group && groups.some(g => g.id === group.id)
+  const isMember = !!user && !!group && groups.some(g => g.id === group.group_id)
   const showMemberMessage = alreadyMember || isMember
 
   useEffect(() => {
@@ -41,11 +41,11 @@ export default function JoinGroup() {
     setError('')
     try {
       const { error: err } = await supabase.from('group_members').insert({
-        group_id: group.id, user_id: user.id, role: 'member'
+        group_id: group.group_id, user_id: user.id, role: 'member'
       })
       if (err) throw err
-      await joinGroup(group.id)
-      navigate(`/groups/${group.id}`)
+      await joinGroup(group.group_id)
+      navigate(`/groups/${group.group_id}`)
     } catch (err) {
       if (err?.code === '23505' || /duplicate key/i.test(err?.message || '')) {
         setAlreadyMember(true)
@@ -72,7 +72,7 @@ export default function JoinGroup() {
           <>
             <h1 className="text-2xl font-bold text-black mb-2 mt-4">Fai già parte di questo gruppo</h1>
             <p className="text-xl mb-8">Fai parte di <strong>{group.name}</strong></p>
-            <Button text="Vai al Gruppo" variant="primary2" size="xl" wide onClick={() => navigate(`/groups/${group.id}`)} />
+            <Button text="Vai al Gruppo" variant="primary2" size="xl" wide onClick={() => navigate(`/groups/${group.group_id}`)} />
           </>
         ) : group ? (
           <>
