@@ -6,6 +6,10 @@
 -- a non-member returned no rows ("Link invito non valido o scaduto").
 -- Fix: SECURITY DEFINER function that looks up an invite by its
 -- secret code, bypassing RLS, without exposing the whole table.
+-- NOTE: must be LANGUAGE plpgsql, NOT sql: PostgreSQL inlines SQL
+-- functions, which makes them run in the CALLER's security context
+-- (RLS applies again, so non-members get no rows). plpgsql is never
+-- inlined, so SECURITY DEFINER always bypasses RLS.
 
 CREATE OR REPLACE FUNCTION public.get_invite_by_code(invite_code TEXT)
 RETURNS TABLE (
@@ -16,13 +20,17 @@ RETURNS TABLE (
   expires_at TIMESTAMPTZ,
   name TEXT
 )
-LANGUAGE sql SECURITY DEFINER STABLE
+LANGUAGE plpgsql SECURITY DEFINER STABLE
+SET search_path = public, pg_temp
 AS $$
+BEGIN
+  RETURN QUERY
   SELECT i.id, i.group_id, i.created_by, i.created_at, i.expires_at, g.name
   FROM public.group_invites i
   JOIN public.groups g ON g.id = i.group_id
   WHERE i.code = invite_code
   LIMIT 1;
+END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.get_invite_by_code(TEXT) TO anon, authenticated;
