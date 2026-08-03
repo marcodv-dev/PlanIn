@@ -26,10 +26,10 @@ export default function Dashboard() {
     <div className="d-flex-1 d-flex flex-col px-4 pt-4 overflow-hidden">
       <div className="shrink-0 d-flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-accent">I miei gruppi</h1>
-        <Link to="/groups/new">
-          <Button text="Nuovo" variant="primary" size="sm" />
-        </Link>
+        
       </div>
+
+      <Button icon={<Plus size={24} />} className="pos-fixed z-50" variant="primary" size="xl" square="square" style={{ width: 56, height: 56, bottom: '100px', right: '12px' }} onClick={() => navigate(`/groups/new`)} />
 
       {groups.length === 0 ? (
         <div className="flex-1 d-flex items-center justify-center text-center mx-auto max-w-lg w-full">
@@ -40,10 +40,10 @@ export default function Dashboard() {
           </div>
         </div>
       ) : (
-        <div className="max-w-lg flex-1 overflow-y-auto space-y-3 pb-2 w-full mx-auto">
+        <div className="max-w-lg flex-1 overflow-y-auto space-y-3 pb-20 w-full mx-auto">
           {groups.map(group => (
             <Link key={group.id} to={`/groups/${group.id}`}
-              className="block bg-card border border-card rounded-lg2 p-4 hover:border-accent/50 transition active:scale-98">
+              className="block bg-card border border-card rounded-lg2 p-4 transition active:scale-98">
               <div className="d-flex items-center justify-between">
                 <div className="min-w-0">
                   <h2 className="font-bold text-accent text-xl">{group.name}</h2>

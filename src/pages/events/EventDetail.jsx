@@ -17,8 +17,8 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
 })
 
-const blueIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+const redIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34]
 })
@@ -231,7 +231,7 @@ export default function EventDetail() {
         <MapContainer center={mapCenter} zoom={10} className="map-container">
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           {hasCoords && (
-            <Marker position={[event.location_lat, event.location_lng]} icon={blueIcon}>
+            <Marker position={[event.location_lat, event.location_lng]} icon={redIcon}>
               <Popup>
                 <strong>{event.title}</strong><br /><span className="capitalize">{event.location_name}</span>
               </Popup>
@@ -245,7 +245,7 @@ export default function EventDetail() {
             const lat = p.start_lat ?? p.profiles?.home_lat
             const lng = p.start_lng ?? p.profiles?.home_lng
             return (
-            <Marker key={p.id} position={[lat, lng]} icon={p.status === 'confirmed' ? greenIcon : grayIcon}>
+            <Marker key={p.id} position={[lat, lng]} icon={p.user_id === user.id ? greenIcon : grayIcon}>
               <Popup>
                 <div className="d-flex items-center gap-2">
                   {p.profiles?.avatar_url && <img src={p.profiles.avatar_url} alt="" className="w-6 h-6 rounded-full" />}

@@ -14,6 +14,8 @@ export default function Profile() {
   const [form, setForm] = useState({ first_name: '', last_name: '', username: '', home_address: '' })
   const [avatar, setAvatar] = useState(null)
   const [avatarPreview, setAvatarPreview] = useState(null)
+  const [avatarSrc, setAvatarSrc] = useState(null)
+  const [avatarFailed, setAvatarFailed] = useState(false)
   const [loading, setLoading] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerClosing, setPickerClosing] = useState(false)
@@ -68,6 +70,19 @@ export default function Profile() {
       })
     }
   }, [profile])
+
+  useEffect(() => {
+    setAvatarFailed(false)
+    setAvatarSrc(profile?.avatar_url || null)
+  }, [profile?.avatar_url])
+
+  function handleAvatarError() {
+    if (avatarSrc && avatarSrc !== profile?.avatar_url) {
+      setAvatarFailed(true)
+    } else {
+      setAvatarSrc(`${profile.avatar_url}?t=${Date.now()}`)
+    }
+  }
 
   function handleChange(e) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
@@ -143,8 +158,8 @@ export default function Profile() {
             style={{width:'50%',aspectRatio:1, maxWidth:'200px'}}>
             {avatarPreview
               ? <img src={avatarPreview} alt="" className="w-full h-full object-cover" />
-              : profile?.avatar_url
-                ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+              : avatarSrc && !avatarFailed
+                ? <img src={avatarSrc} alt="" onError={handleAvatarError} className="w-full h-full object-cover" />
                 : <span className="text-accent font-bold" style={{fontSize:60}}>{profile?.username?.[0]}</span>
             }
           </div>

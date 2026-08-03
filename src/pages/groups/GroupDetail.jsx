@@ -3,10 +3,173 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../store/AuthContext'
 import { useData } from '../../store/DataContext'
-import { geocodeAddress, isPollExpired } from '../../lib/utils'
+import { geocodeAddress, isPollExpired, isEventPast } from '../../lib/utils'
 import { useToast } from '../../store/ToastContext'
 import Button from '../../components/ui/Button'
-import { Share2, BarChart3, Calendar, Users, ChevronLeft, Pencil, Trash2, Send, Plus, X, MessageCircle, Check } from 'lucide-react'
+import { Share2, BarChart3, Calendar, Users, ChevronLeft, Pencil, Trash2, Send, Plus, X, MessageCircle, Check, ChevronDown } from 'lucide-react'
+
+function PollCard({ poll, optionsByPoll, votesByPoll, commentsByPoll, user, eventSourceIds, visibleComments, newCommentText, setNewCommentText, handleEditClick, handleDeleteClick, handleVoteClick, toggleComments, handleAddComment }) {
+  const expired = isPollExpired(poll.expires_at)
+  const options = optionsByPoll[poll.id] || []
+  const votes = votesByPoll[poll.id] || []
+  const myVoteIds = votes.filter(v => v.user_id === user.id).map(v => v.option_id)
+  const voteCounts = {}
+  votes.forEach(v => { voteCounts[v.option_id] = (voteCounts[v.option_id] || 0) + 1 })
+  const totalV = votes.length
+  const comments = commentsByPoll[poll.id] || []
+  const commentCount = comments.length
+  const hasEvent = eventSourceIds.has(poll.id)
+
+  return (
+    <div className="bg-card border border-card rounded-lg2 overflow-hidden">
+      <div className="p-4">
+        <div className="d-flex items-center justify-between">
+          <div>
+            <h3 className="d-flex gap-2 font-medium text-black capitalize">
+              {poll.title}
+              {hasEvent && (
+                <span className="mt-auto d-flex gap-1 text-xs text-green-500 font-medium ml-2"><Check size={14} /> Evento creato</span>
+              )}
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">
+              {expired ? (
+                <span className="text-xs text-red-500 border border-danger/50 rounded-full px-2 py-0.5 font-medium">Scaduto</span>
+              ) : (
+                new Date(poll.expires_at).toLocaleString('it', { dateStyle: 'short', timeStyle: 'short' })
+              )}
+            </p>
+          </div>
+          <div className="d-flex items-center gap-2 shrink-0 ml-2">
+            <button onClick={e => handleEditClick(e, poll)} className="text-gray-400 p-1">
+              <Pencil size={20} />
+            </button>
+            <button onClick={e => handleDeleteClick(e, poll.id)} className="text-gray-400 active:text-red-400 p-1">
+              <Trash2 size={22} />
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-2 mt-4">
+          {options.map(opt => {
+            const voted = myVoteIds.includes(opt.id)
+            const count = voteCounts[opt.id] || 0
+            const pct = totalV > 0 ? Math.round((count / totalV) * 100) : 0
+            const voters = votes.filter(v => v.option_id === opt.id)
+            return (
+              <button key={opt.id} onClick={() => handleVoteClick(poll.id, opt.id)} disabled={expired}
+                className={`w-full text-left border rounded-lg2 p-4 transition relative text-black overflow-hidden bg-page ${voted ? 'border-accent-hover' : 'border-light'} ${expired ? 'opacity-60' : ''}`}>
+                <div style={{
+                  position: 'absolute', top: 0, left: 0, bottom: 0,
+                  width: `${pct}%`,
+                  backgroundImage: 'linear-gradient(to right, var(--accent-opacity) 0%, var(--accent-opacity) 100%)',
+                  transition: 'width 0.6s ease-out'
+                }} />
+                <div className="d-flex justify-between items-center gap-2 relative" style={{ zIndex: 1 }}>
+                  <div className="min-w-0">
+                    <span className="font-medium text-sm truncate block capitalize">{opt.title} - {opt.location_name}</span>
+                    <div className="d-flex items-center gap-0.5 mt-1">
+                      {voters.slice(0, 5).map(v => v.profiles ? (
+                        v.profiles.avatar_url ? (
+                          <img key={v.id} src={v.profiles.avatar_url} alt=""
+                            className="w-5 h-5 rounded-full object-cover border" />
+                        ) : (
+                          <div key={v.id}
+                            className="w-5 h-5 rounded-full bg-gray-500 d-flex items-center justify-center font-medium text-black border bg-accent"
+                            style={{ borderColor: 'var(--accent-hover)' }}>
+                            {(v.profiles.username || '?')[0]}
+                          </div>
+                        )
+                      ) : null)}
+                      {voters.length > 5 && (
+                        <span className="text-[10px] text-gray-500 ml-0.5">+{voters.length - 5}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0 mb-auto">
+                    <div className="text-xs text-gray-600">{pct}%{` (${count})`}</div>
+                  </div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+
+        <button onClick={() => toggleComments(poll.id)}
+          className={`d-flex gap-1 mt-4 text-sm transition ${visibleComments[poll.id] ? 'text-accent-hover' : 'text-gray-500'}`} style={{ marginLeft: 'auto' }}>
+          <MessageCircle size={20} />
+          {commentCount > 0 && <span className="text-xs">({commentCount})</span>}
+        </button>
+
+        <div style={{
+          maxHeight: visibleComments[poll.id] ? '2000px' : '0',
+          opacity: visibleComments[poll.id] ? 1 : 0,
+          overflow: 'hidden',
+          transition: 'max-height 0.2s ease-out, opacity 0.2s ease-out'
+        }}>
+          <div className="mt-6">
+            {comments.length === 0 && (
+              <p className="text-xs text-gray-500 mb-2">Nessun commento</p>
+            )}
+            <div className="space-y-2 mb-3">
+              {comments.map(c => (
+                <div key={c.id} className="bg-page border border-light rounded-lg px-2 py-1">
+                  <div className="d-flex items-center gap-2 mb-1">
+                    <span className="text-xs font-medium text-accent-hover">{c.profiles?.username}</span>
+                    <span className="text-xs text-gray-500">{new Date(c.created_at).toLocaleString('it', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                  </div>
+                  <p className="text-sm text-gray-600">{c.content}</p>
+                </div>
+              ))}
+            </div>
+
+            {!expired && (
+              <form onSubmit={e => { e.preventDefault(); handleAddComment(poll.id) }} className="d-flex gap-2">
+                <input value={newCommentText[poll.id] || ''} onChange={e => setNewCommentText(prev => ({ ...prev, [poll.id]: e.target.value }))}
+                  placeholder="Scrivi un commento..."
+                  className="d-flex-1 bg-page border border-light rounded px-3 py-2 text-black text-sm outline-none focus:border-accent" />
+                <button type="submit" className="text-accent hover:text-accent-hover transition">
+                  <Send size={20} />
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function EventCard({ ev, participantsByEvent, user, members, navigate, groupId, tab, handleDeleteEvent }) {
+  const past = isEventPast(ev.event_date)
+  const evParts = participantsByEvent[ev.id] || []
+  const activeCount = evParts.filter(p => p.status !== 'declined').length
+  const myStatus = evParts.find(p => p.user_id === user.id)?.status
+  return (
+    <div key={ev.id} onClick={() => navigate(`/groups/${groupId}/events/${ev.id}`, { state: { fromTab: tab } })}
+      className={`bg-card border border-card rounded-lg2 overflow-hidden p-4 transition active:scale-98 ${past ? 'opacity-80' : ''}`}>
+      <div className="d-flex items-center justify-between gap-2">
+        <div className="d-flex d-flex-1 justify-between min-w-0 flex-1">
+          <h3 className="font-medium truncate" style={{ textTransform: 'capitalize' }}>{ev.title}</h3>
+          {past && <span className="text-xs text-red-500 border border-danger/50 rounded-full px-2 py-0.5 font-medium shrink-0 my-auto">Passato</span>}
+          {!past && myStatus === 'confirmed' && <span className="d-flex gap-1 text-accent-hover font-bold shrink-0" ><Check size={20} /> Partecipo</span>}
+          {!past && myStatus === 'maybe' && <span className="d-flex gap-1 text-gray-600 font-bold shrink-0" >? Forse</span>}
+        </div>
+        <div className="d-flex items-center gap-2 shrink-0">
+          {ev.created_by === user.id && (
+            <button onClick={e => handleDeleteEvent(e, ev)}
+              className="text-gray-400 hover:text-red-400 p-1">
+              <Trash2 size={22} />
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="d-flex justify-between gap-2 mt-1">
+        <p className="text-sm text-gray-500"><span className="capitalize">{ev.location_name}</span>, {new Date(ev.event_date).toLocaleString('it', { dateStyle: 'short', timeStyle: 'short' })}</p>
+        <span className="text-xs text-gray-500">{activeCount}/{members}</span>
+      </div>
+    </div>
+  )
+}
 
 export default function GroupDetail() {
   const { groupId } = useParams()
@@ -31,11 +194,21 @@ export default function GroupDetail() {
   const [editExpiresAt, setEditExpiresAt] = useState('')
   const [editOptions, setEditOptions] = useState([])
   const [editingPollId, setEditingPollId] = useState(null)
+  const [showExpired, setShowExpired] = useState(false)
+  const [showPastEvents, setShowPastEvents] = useState(false)
 
   const group = groups.find(g => g.id === groupId)
   const members = membersByGroup[groupId] || []
   const polls = pollsByGroup[groupId] || []
+  const activePolls = polls.filter(p => !isPollExpired(p.expires_at))
+    .sort((a, b) => new Date(b.expires_at) - new Date(a.expires_at))
+  const expiredPolls = polls.filter(p => isPollExpired(p.expires_at))
+    .sort((a, b) => new Date(b.expires_at) - new Date(a.expires_at))
   const events = eventsByGroup[groupId] || []
+  const upcomingEvents = events.filter(ev => !isEventPast(ev.event_date))
+    .sort((a, b) => new Date(b.event_date) - new Date(a.event_date))
+  const pastEvents = events.filter(ev => isEventPast(ev.event_date))
+    .sort((a, b) => new Date(b.event_date) - new Date(a.event_date))
   const inviteCode = invitesByGroup[groupId]
 
   useEffect(() => {
@@ -174,6 +347,7 @@ export default function GroupDetail() {
   const isAdmin = members.some(m => m.user_id === user.id && m.role === 'admin')
   const eventSourcePolls = new Set(events.filter(e => e.source_poll_id).map(e => e.source_poll_id))
 
+
   return (
     <div className="d-flex-1 d-flex flex-col px-4 pt-4 overflow-hidden">
       <div  style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
@@ -197,7 +371,7 @@ export default function GroupDetail() {
         </div>
 
         <button onClick={copyInviteLink}
-          className="w-20 d-flex items-center justify-end gap-2 text-sm text-gray-400 hover:text-accent transition relative">
+          className="w-20 d-flex items-center justify-end gap-2 text-sm text-gray-400 transition relative">
           {inviteCode && <><Share2 size={22}/></>}
         </button>
       </div>
@@ -219,179 +393,82 @@ export default function GroupDetail() {
 
       {tab === 'polls' && (
         <div className="max-w-lg flex-1 overflow-hidden d-flex flex-col w-full mx-auto">
-          <div className="shrink-0 d-flex justify-center mb-6 mt-4">
-            <Button text="Nuovo Sondaggio" variant="primary" size="xl" fullWidth onClick={() => navigate(`/groups/${groupId}/polls/new`)} />
-          </div>
-          {polls.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">Nessun sondaggio attivo</p>
-          ) : (
-            <div className="flex-1 overflow-y-auto space-y-3 pb-2">
-              {polls.map(poll => {
-                const expired = isPollExpired(poll.expires_at)
-                const options = optionsByPoll[poll.id] || []
-                const votes = votesByPoll[poll.id] || []
-                const myVoteIds = votes.filter(v => v.user_id === user.id).map(v => v.option_id)
-                const voteCounts = {}
-                votes.forEach(v => { voteCounts[v.option_id] = (voteCounts[v.option_id] || 0) + 1 })
-                const totalV = votes.length
-                const comments = commentsByPoll[poll.id] || []
-                const commentCount = (commentsByPoll[poll.id] || []).length
+          <div className={`flex-1 overflow-y-auto space-y-3 ${expiredPolls.length > 0 ? 'pb-4':'pb-20'}`}>
+            {activePolls.length === 0 && (
+              <p className="text-gray-500 text-center py-8">Nessun sondaggio attivo</p>
+            )}
+            {activePolls.map(poll => <PollCard key={poll.id} poll={poll} optionsByPoll={optionsByPoll} votesByPoll={votesByPoll} commentsByPoll={commentsByPoll} user={user} eventSourceIds={eventSourcePolls} visibleComments={visibleComments} newCommentText={newCommentText} setNewCommentText={setNewCommentText} handleEditClick={handleEditClick} handleDeleteClick={handleDeleteClick} handleVoteClick={handleVoteClick} toggleComments={toggleComments} handleAddComment={handleAddComment} />)}
 
-                return (
-                  <div key={poll.id} className="bg-card border border-card rounded-lg2 overflow-hidden">
-
-                    <div className="p-4">
-                      <div className="d-flex items-center justify-between">
-                        <div>
-                          <h3 className="d-flex gap-2 font-medium text-black capitalize">
-                            {poll.title}
-                            {eventSourcePolls.has(poll.id) && (
-                              <span className="mt-auto d-flex gap-1 text-xs text-green-500 font-medium ml-2"><Check size={14} /> Evento creato</span>
-                            )}
-                          </h3>
-                          <p className="text-sm text-gray-500 mt-1">
-                            {expired ? 'Scaduto' : `${new Date(poll.expires_at).toLocaleString('it', { dateStyle: 'short', timeStyle: 'short' })}`}
-                          </p>
-                        </div>
-                        <div className="d-flex items-center gap-2 shrink-0 ml-2">
-                          {(!pollEditing || editingPollId !== poll.id) && (
-                            <button onClick={e => handleEditClick(e, poll)} className="text-gray-400 hover:text-accent p-1">
-                              <Pencil size={20} />
-                            </button>
-                          )}
-                          <button onClick={e => handleDeleteClick(e, poll.id)} className="text-gray-400 hover:text-red-400 p-1">
-                            <Trash2 size={22} />
-                          </button>
-                        </div>
-                      </div>
-
-                      {pollEditing && editingPollId === poll.id ? (
-                        <div className="space-y-3 mt-4 max-w-sm mx-auto">
-                          <input value={editTitle} onChange={e => setEditTitle(e.target.value)}
-                            className="w-full bg-page border border-light rounded px-3 py-2 text-black outline-none focus:border-accent mt-4"
-                            placeholder="Titolo sondaggio" />
-                          <div className="d-flex min-w-0"><input type="datetime-local" value={editExpiresAt} onChange={e => setEditExpiresAt(e.target.value)}
-                            className="w-full min-w-0 bg-page border border-light rounded px-3 py-2 text-sm text-black outline-none focus:border-accent" /></div>
-                          <div className="d-flex items-center justify-between">
-                            <span className="text-sm text-gray-600">Opzioni</span>
-                            <button type="button" onClick={addEditOption} className="d-flex items-center gap-1 text-xs text-accent-hover">
-                              <Plus size={14} /> Aggiungi opzione
-                            </button>
-                          </div>
-                          {editOptions.map((opt, i) => (
-                            <div key={i} className="rounded-lg p-3 border border-light bg-page">
-                              <div className="d-flex items-center justify-between mb-2">
-                                <span className="text-xs text-gray-600">Opzione {i + 1}</span>
-                                <button type="button" onClick={() => removeEditOption(i)} className="text-red-400 hover:text-red-300">
-                                  <X size={16} />
-                                </button>
-                              </div>
-                              <input value={opt.title} onChange={e => updateEditOption(i, 'title', e.target.value)}
-                                placeholder="Nome"
-                                className="w-full border border-light rounded px-3 py-2 text-black text-sm outline-none focus:border-accent mb-2" />
-                              <input value={opt.location} onChange={e => updateEditOption(i, 'location', e.target.value)}
-                                placeholder="Indirizzo del luogo"
-                                className="w-full border border-light rounded px-3 py-2 text-black text-sm outline-none focus:border-accent" />
-                            </div>
-                          ))}
-                          <div className="d-flex flex-col gap-3" style={{marginTop:40}}>
-                            <Button text="Salva" variant="primary" size="xl" fullWidth onClick={handleSaveEdit} />
-                            <Button text="Annulla" variant="secondary" size="xl" fullWidth onClick={handleCancelEdit} />
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="space-y-2 mt-4">
-                            {options.map(opt => {
-                              const voted = myVoteIds.includes(opt.id)
-                              const count = voteCounts[opt.id] || 0
-                              const pct = totalV > 0 ? Math.round((count / totalV) * 100) : 0
-                              const voters = votes.filter(v => v.option_id === opt.id)
-                              return (
-                                <button key={opt.id} onClick={() => handleVoteClick(poll.id, opt.id)} disabled={expired}
-                                  className={`w-full text-left border  rounded-lg2 p-4 transition relative text-black overflow-hidden bg-page ${voted ? 'border-accent-hover' : 'border-light'} ${expired ? 'opacity-60' : ''}`}>
-                                  <div style={{
-                                    position: 'absolute', top: 0, left: 0, bottom: 0,
-                                    width: `${pct}%`,
-                                    backgroundColor: 'var(--accent-opacity)',
-                                    transition: 'width 0.6s ease-out'
-                                  }} />
-                                  <div className="d-flex justify-between items-center gap-2 relative" style={{zIndex: 1}}>
-                                    <div className="min-w-0">
-                                      <span className="font-medium text-sm truncate block capitalize">{opt.title} - {opt.location_name}</span>
-                                      <div className="d-flex items-center gap-0.5 mt-1">
-                                        {voters.slice(0, 5).map(v => v.profiles ? (
-                                          v.profiles.avatar_url ? (
-                                            <img key={v.id} src={v.profiles.avatar_url} alt=""
-                                              className="w-5 h-5 rounded-full object-cover border" />
-                                          ) : (
-                                            <div key={v.id}
-                                              className="w-5 h-5 rounded-full bg-gray-500 d-flex items-center justify-center font-medium text-black border bg-accent"
-                                              style={{borderColor:'var(--accent-hover)'}}>
-                                              {(v.profiles.username || '?')[0]}
-                                            </div>
-                                          )
-                                        ) : null)}
-                                        {voters.length > 5 && (
-                                          <span className="text-[10px] text-gray-500 ml-0.5">+{voters.length - 5}</span>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <div className="text-right shrink-0 mb-auto">
-                                      <div className="text-xs text-gray-600">{pct}%{` (${count})`}</div>
-                                    </div>
-                                  </div>
-                                </button>
-                              )
-                            })}
-                          </div>
-
-                          <button onClick={() => toggleComments(poll.id)}
-                            className={`d-flex gap-1 mt-4 text-sm transition ${visibleComments[poll.id]? 'text-accent-hover':'text-gray-500'}`} style={{marginLeft:'auto'}}>
-                            <MessageCircle size={20} />
-                            {commentCount > 0 && <span className="text-xs">({commentCount})</span>}
-                          </button>
-
-                          <div style={{
-                            maxHeight: visibleComments[poll.id] ? '2000px' : '0',
-                            opacity: visibleComments[poll.id] ? 1 : 0,
-                            overflow: 'hidden',
-                            transition: 'max-height 0.2s ease-out, opacity 0.2s ease-out'
-                          }}>
-                            <div className="mt-6">
-                              {comments.length === 0 && (
-                                <p className="text-xs text-gray-500 mb-2">Nessun commento</p>
-                              )}
-                              <div className="space-y-2 mb-3">
-                                {comments.map(c => (
-                                  <div key={c.id} className="bg-page border border-light rounded-lg px-2 py-1">
-                                    <div className="d-flex items-center gap-2 mb-1">
-                                      <span className="text-xs font-medium text-accent-hover">{c.profiles?.username}</span>
-                                      <span className="text-xs text-gray-500">{new Date(c.created_at).toLocaleString('it', { dateStyle: 'short', timeStyle: 'short' })}</span>
-                                    </div>
-                                    <p className="text-sm text-gray-600">{c.content}</p>
-                                  </div>
-                                ))}
-                              </div>
-
-                              {!expired && (
-                                <form onSubmit={e => { e.preventDefault(); handleAddComment(poll.id) }} className="d-flex gap-2">
-                                  <input value={newCommentText[poll.id] || ''} onChange={e => setNewCommentText(prev => ({ ...prev, [poll.id]: e.target.value }))}
-                                    placeholder="Scrivi un commento..."
-                                    className="d-flex-1 bg-page border border-light rounded px-3 py-2 text-black text-sm outline-none focus:border-accent" />
-                                  <button type="submit" className="text-accent hover:text-accent-hover transition">
-                                    <Send size={20} />
-                                  </button>
-                                </form>
-                              )}
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
+            {expiredPolls.length > 0 && (
+              <div style={{border:'none', marginTop:20}}>
+                <button onClick={() => setShowExpired(prev => !prev)}
+                  className="d-flex items-center gap-2 py-3 text-sm text-gray-600" style={{width:'auto',borderTop:'1px solid',}}>
+                  <ChevronDown size={18} style={{ transform: showExpired ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
+                  <span className="font-medium">Sondaggi scaduti ({expiredPolls.length})</span>
+                </button>
+                <div style={{
+                  maxHeight: showExpired ? '2000px' : '0',
+                  opacity: showExpired ? 1 : 0,
+                  overflow: 'hidden',
+                  transition: 'max-height 0.2s ease-out, opacity 0.2s ease-out'
+                }}>
+                  <div className="space-y-3 pt-4 pb-20">
+                    {expiredPolls.map(poll => <PollCard key={poll.id} poll={poll} optionsByPoll={optionsByPoll} votesByPoll={votesByPoll} commentsByPoll={commentsByPoll} user={user} eventSourceIds={eventSourcePolls} visibleComments={visibleComments} newCommentText={newCommentText} setNewCommentText={setNewCommentText} handleEditClick={handleEditClick} handleDeleteClick={handleDeleteClick} handleVoteClick={handleVoteClick} toggleComments={toggleComments} handleAddComment={handleAddComment} />)}
                   </div>
-                )
-              })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Button icon={<Plus size={24} />} variant="primary" size="xl"
+            className="pos-fixed z-50" square="square" style={{ width: 56, height: 56, bottom: '100px', right: 12 }}
+            onClick={() => navigate(`/groups/${groupId}/polls/new`)} />
+
+          {pollEditing && (
+            <div className="pos-fixed inset-0 bg-black/70 d-flex items-center justify-center p-4"
+              style={{ zIndex: 60 }} onClick={handleCancelEdit}>
+              <div className="bg-page rounded-lg2 p-6 w-full max-w-lg border border-light overflow-y-auto"
+                style={{ maxHeight: '85vh' }} onClick={e => e.stopPropagation()}>
+                <div className="d-flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-accent">Modifica sondaggio</h2>
+                  <button onClick={handleCancelEdit} className="text-gray-400 hover:text-red-300">
+                    <X size={22} />
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  <input value={editTitle} onChange={e => setEditTitle(e.target.value)}
+                    className="w-full bg-page border border-light rounded px-3 py-2 text-black outline-none focus:border-accent"
+                    placeholder="Titolo sondaggio" />
+                  <div className="d-flex min-w-0"><input type="datetime-local" value={editExpiresAt} onChange={e => setEditExpiresAt(e.target.value)}
+                    className="w-full min-w-0 bg-page border border-light rounded px-3 py-2 text-sm text-black outline-none focus:border-accent" /></div>
+                  <div className="d-flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Opzioni</span>
+                    <button type="button" onClick={addEditOption} className="d-flex items-center gap-1 text-xs text-accent-hover">
+                      <Plus size={14} /> Aggiungi opzione
+                    </button>
+                  </div>
+                  {editOptions.map((opt, i) => (
+                    <div key={i} className="rounded-lg p-3 border border-light bg-page">
+                      <div className="d-flex items-center justify-between mb-2">
+                        <span className="text-xs text-gray-600">Opzione {i + 1}</span>
+                        <button type="button" onClick={() => removeEditOption(i)} className="text-red-400 hover:text-red-300">
+                          <X size={16} />
+                        </button>
+                      </div>
+                      <input value={opt.title} onChange={e => updateEditOption(i, 'title', e.target.value)}
+                        placeholder="Nome"
+                        className="w-full border border-light rounded px-3 py-2 text-black text-sm outline-none focus:border-accent mb-2" />
+                      <input value={opt.location} onChange={e => updateEditOption(i, 'location', e.target.value)}
+                        placeholder="Indirizzo del luogo"
+                        className="w-full border border-light rounded px-3 py-2 text-black text-sm outline-none focus:border-accent" />
+                    </div>
+                  ))}
+                  <div className="d-flex flex-col gap-3" style={{ marginTop: 40 }}>
+                    <Button text="Salva" variant="primary" size="xl" fullWidth onClick={handleSaveEdit} />
+                    <Button text="Annulla" variant="secondary" size="xl" fullWidth onClick={handleCancelEdit} />
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -399,44 +476,38 @@ export default function GroupDetail() {
 
       {tab === 'events' && (
         <div className="max-w-lg flex-1 overflow-hidden d-flex flex-col w-full mx-auto">
-          <div className="shrink-0 d-flex justify-center mb-6 mt-4">
-            <Button text="Nuovo Evento" variant="primary" size="xl" fullWidth onClick={() => navigate(`/groups/${groupId}/events/new`)} />
-          </div>
-          {events.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">Nessun evento pianificato</p>
-          ) : (
-            <div className="flex-1 overflow-y-auto space-y-3 pb-2">
-              {events.map(ev => {
-                const evParts = participantsByEvent[ev.id] || []
-                const activeCount = evParts.filter(p => p.status !== 'declined').length
-                const myStatus = evParts.find(p => p.user_id === user.id)?.status
-                return (
-                  <div key={ev.id} onClick={() => navigate(`/groups/${groupId}/events/${ev.id}`, { state: { fromTab: tab } })}
-                    className="bg-card border border-card rounded-lg2 overflow-hidden p-4 transition active:scale-98">
-                    <div className="d-flex items-center justify-between gap-2">
-                      <div className="d-flex d-flex-1 justify-between min-w-0 flex-1">
-                        <h3 className="font-medium truncate" style={{textTransform:'capitalize'}}>{ev.title}</h3>
-                        {myStatus === 'confirmed' && <span className="d-flex gap-1 text-accent-hover font-bold shrink-0" ><Check size={20} /> Partecipo</span>}
-                        {myStatus === 'maybe' && <span className="d-flex gap-1 text-gray-600 font-bold shrink-0" >? Forse</span>}
-                      </div>
-                      <div className="d-flex items-center gap-2 shrink-0">
-                        {ev.created_by === user.id && (
-                          <button onClick={e => handleDeleteEvent(e, ev)}
-                            className="text-gray-400 hover:text-red-400 p-1">
-                            <Trash2 size={22} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <div className="d-flex justify-between gap-2 mt-1">
-                      <p className="text-sm text-gray-500"><span className="capitalize">{ev.location_name}</span>, {new Date(ev.event_date).toLocaleString('it', { dateStyle: 'short', timeStyle: 'short' })}</p>
-                      <span className="text-xs text-gray-500">{activeCount}/{members.length}</span>
-                    </div>
+          <div className="flex-1 overflow-y-auto space-y-3 pb-24">
+          <div className={`flex-1 overflow-y-auto space-y-3 ${pastEvents.length > 0 ? 'pb-4' : 'pb-20'}`}>
+            {upcomingEvents.length === 0 && (
+              <p className="text-gray-500 text-center py-8">Nessun evento in programma</p>
+            )}
+            {upcomingEvents.map(ev => <EventCard key={ev.id} ev={ev} participantsByEvent={participantsByEvent} user={user} members={members.length} navigate={navigate} groupId={groupId} tab={tab} handleDeleteEvent={handleDeleteEvent} />)}
+
+            {pastEvents.length > 0 && (
+              <div style={{ border: 'none', marginTop: 20 }}>
+                <button onClick={() => setShowPastEvents(prev => !prev)}
+                  className="d-flex items-center gap-2 py-3 text-sm text-gray-600" style={{ width: 'auto', borderTop: '1px solid' }}>
+                  <ChevronDown size={18} style={{ transform: showPastEvents ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
+                  <span className="font-medium">Eventi passati ({pastEvents.length})</span>
+                </button>
+                <div style={{
+                  maxHeight: showPastEvents ? '2000px' : '0',
+                  opacity: showPastEvents ? 1 : 0,
+                  overflow: 'hidden',
+                  transition: 'max-height 0.2s ease-out, opacity 0.2s ease-out'
+                }}>
+                  <div className="space-y-3 pt-4 pb-20">
+                    {pastEvents.map(ev => <EventCard key={ev.id} ev={ev} participantsByEvent={participantsByEvent} user={user} members={members.length} navigate={navigate} groupId={groupId} tab={tab} handleDeleteEvent={handleDeleteEvent} />)}
                   </div>
-                )
-              })}
-            </div>
-          )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Button icon={<Plus size={24} />} variant="primary" size="xl"
+            className="pos-fixed z-50" square="square" style={{ width: 56, height: 56, bottom: 100, right: 12 }}
+            onClick={() => navigate(`/groups/${groupId}/events/new`)} />
+        </div>
         </div>
       )}
 

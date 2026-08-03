@@ -1,4 +1,4 @@
-const DEFAULT_KEY = 'green'
+const DEFAULT_KEY = 'black'
 
 function hexToHue(hex) {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex)
@@ -23,12 +23,16 @@ export function getAccentOptions() {
   const options = []
   for (const prop of cs) {
     if (!prop.startsWith('--accent-')) continue
-    if (prop.endsWith('-hover') || prop.endsWith('-opacity')) continue
+    if (prop.endsWith('-hover') || prop.endsWith('-opacity') || prop.endsWith('-bg') || prop.endsWith('-btn') || prop.endsWith('-bg-2') || prop.endsWith('-btn-2')) continue
     const key = prop.replace('--accent-', '')
     const accent = cs.getPropertyValue(prop).trim()
     const hover = cs.getPropertyValue(`--accent-${key}-hover`).trim() || accent
     const opacity = cs.getPropertyValue(`--accent-${key}-opacity`).trim() || `${accent}33`
-    options.push({ key, accent, hover, opacity })
+    const bg = cs.getPropertyValue(`--accent-${key}-bg`).trim() || accent
+    const bg2 = cs.getPropertyValue(`--accent-${key}-bg-2`).trim() || bg
+    const btn = cs.getPropertyValue(`--accent-${key}-btn`).trim() || accent
+    const btn2 = cs.getPropertyValue(`--accent-${key}-btn-2`).trim() || btn
+    options.push({ key, accent, hover, opacity, bg, bg2, btn, btn2 })
   }
   return options.sort((a, b) => hexToHue(a.accent) - hexToHue(b.accent))
 }
@@ -41,4 +45,8 @@ export function applyAccent(key) {
   root.style.setProperty('--accent', opt.accent)
   root.style.setProperty('--accent-hover', opt.hover)
   root.style.setProperty('--accent-opacity', opt.opacity)
+  root.style.setProperty('--accent-bg', opt.bg)
+  root.style.setProperty('--accent-bg-2', opt.bg2)
+  root.style.setProperty('--accent-btn', opt.btn)
+  root.style.setProperty('--accent-btn-2', opt.btn2)
 }

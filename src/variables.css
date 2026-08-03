@@ -17,41 +17,72 @@
   --text-green-500: rgb(40, 197, 15);
 
   /* Accento (attivo) */
-  --accent: #17c84f;
-  --accent-hover: #13a240;
-  --accent-opacity: #17c84f31;
+  --accent: #000000;
+  --accent-hover: #404040;
+  --accent-opacity: #00000040;
+  --accent-bg: #ffffff;
+  --accent-bg-2: var(--accent-bg);
+  --accent-btn: var(--bg-page);
+  --accent-btn-2: var(--accent-btn);
 
   /* Palette accent — aggiungi qui nuovi colori, compaiono da soli nel selettore */
+  --accent-black: #000000;
+  --accent-black-hover: #404040;
+  --accent-black-opacity: #00000040;
+  --accent-black-bg: #ffffff;
+  --accent-black-bg-2: var(--accent-black-bg);
+  --accent-black-btn: var(--bg-page);
+  --accent-black-btn-2: var(--accent-black-btn);
   --accent-orange: #e67c12;
   --accent-orange-hover: #d1700f;
   --accent-orange-opacity: #e67c1233;
+  --accent-orange-bg-2: #b8550a;
+  --accent-orange-btn-2: #b8550a;
   --accent-cyan: #12c3e6;
   --accent-cyan-hover: #0fa2bf;
   --accent-cyan-opacity: #12c3e633;
+  --accent-cyan-bg-2: #0d7f96;
+  --accent-cyan-btn-2: #0d7f96;
   --accent-blue: #1969fc;
   --accent-blue-hover: #1052cc;
   --accent-blue-opacity: #1969fc33;
+  --accent-blue-bg-2: #0b3fa0;
+  --accent-blue-btn-2: #0b3fa0;
   --accent-pink: #fa4dc6;
   --accent-pink-hover: #e647b6;
   --accent-pink-opacity: #fa4dc633;
+  --accent-pink-bg-2: #b0258f;
+  --accent-pink-btn-2: #b0258f;
   --accent-yellow: #e6cf00;
   --accent-yellow-hover: #d4be00;
   --accent-yellow-opacity: #e6cf0033;
+  --accent-yellow-bg-2: #a58f00;
+  --accent-yellow-btn-2: #a58f00;
   --accent-purple: #d94fff;
   --accent-purple-hover: #b345d1;
   --accent-purple-opacity: #d94fff33;
+  --accent-purple-bg-2: #7b2fb8;
+  --accent-purple-btn-2: #7b2fb8;
   --accent-magenta: #e612d0;
   --accent-magenta-hover: #c910b6;
   --accent-magenta-opacity: #e612d033;
+  --accent-magenta-bg-2: #a80e97;
+  --accent-magenta-btn-2: #a80e97;
   --accent-green: #17c84f;
   --accent-green-hover: #13a240;
   --accent-green-opacity: #17c84f33;
+  --accent-green-bg-2: #0f8a36;
+  --accent-green-btn-2: #0f8a36;
   --accent-emerald: #10e094;
   --accent-emerald-hover: #0dbf7e;
   --accent-emerald-opacity: #10e09433;
+  --accent-emerald-bg-2: #06915f;
+  --accent-emerald-btn-2: #06915f;
   --accent-red: #ff3838;
   --accent-red-hover: #db3030;
   --accent-red-opacity: #ff383833;
+  --accent-red-bg-2: #d31a1a;
+  --accent-red-btn-2: #d31a1a;
   
 
   /* Bordi */

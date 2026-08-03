@@ -59,3 +59,7 @@ export function generateInviteCode() {
 export function isPollExpired(expiresAt) {
   return new Date() > new Date(new Date(expiresAt).getTime() + 24 * 60 * 60 * 1000)
 }
+
+export function isEventPast(eventDate) {
+  return new Date(eventDate) < new Date()
+}

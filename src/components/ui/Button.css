@@ -8,13 +8,14 @@
   padding: 0;
   cursor: pointer;
   outline: none;
-  width: var(--width, auto);
+  width: var(--width, 140px);
   height: var(--height);
   user-select: none;
   transition: all 0.2s ease;
+  --bgcolor2: var(--bgcolor);
 }
 
-.cyber-btn.primary { --bgcolor: var(--accent); }
+.cyber-btn.primary { --bgcolor: var(--accent-btn); --bgcolor2: var(--accent-btn-2); }
 .cyber-btn.primary2 { --bgcolor: var(--bg-page); }
 .cyber-btn.secondary { --bgcolor: var(--btn-secondary-bg); }
 .cyber-btn.sm { --height: 36px; --width: 100px; }
@@ -23,6 +24,7 @@
 .cyber-btn.xl { --height: 48px; font-size: 16px; }
 .cyber-btn.wide { --width: 220px; }
 .cyber-btn.full { --width: 70%; display: flex; margin: 0 auto;}
+.cyber-btn.square {aspect-ratio: 1 !important;}
 
 .cyber-btn .btn-content {
   position: absolute;
@@ -30,7 +32,7 @@
   left: 6px;
   right: 6px;
   bottom: 6px;
-  background-color: var(--bgcolor);
+  background-image: linear-gradient(to right, var(--bgcolor) 0%, var(--bgcolor2) 100%);
   color: var(--bg-dark);
   font-family: var(--font-mono);
   font-weight: 900;
@@ -39,7 +41,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: transform 0.15s ease, background-color 0.2s ease;
+  transition: transform 0.15s ease, background-image 0.2s ease;
   z-index: 1;
 }
 

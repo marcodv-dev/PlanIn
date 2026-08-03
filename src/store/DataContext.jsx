@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './AuthContext'
-import { isPollExpired } from '../lib/utils'
 
 const DataContext = createContext(null)
 
@@ -65,10 +64,10 @@ export function DataProvider({ children }) {
     setEventsByGroup(prev => ({ ...prev, [groupId]: e.data || [] }))
     setInvitesByGroup(prev => ({ ...prev, [groupId]: inv.data?.code }))
 
-    const activePolls = (p.data || []).filter(poll => !isPollExpired(poll.expires_at))
-    setPollsByGroup(prev => ({ ...prev, [groupId]: activePolls }))
+    const allPolls = p.data || []
+    setPollsByGroup(prev => ({ ...prev, [groupId]: allPolls }))
 
-    const pollIds = activePolls.map(x => x.id)
+    const pollIds = allPolls.map(x => x.id)
     if (pollIds.length > 0) {
       const [optsRes, votesRes, commentsRes] = await Promise.all([
         supabase.from('poll_options').select('*').in('poll_id', pollIds),
